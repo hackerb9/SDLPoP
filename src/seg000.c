@@ -588,6 +588,15 @@ int __pascal far process_key() {
 			is_keyboard_mode = 1;
 			need_show_text = 1;
 		break;
+		case SDL_SCANCODE_L | WITH_CTRL: // ctrl-l
+			if (can_load_anytime) {
+				if (!load_game()) return 0;
+#ifdef USE_MENU
+				if (is_menu_shown) menu_was_closed(); // Do necessary cleanup.
+#endif
+				start_game();
+			}
+		break;
 		case SDL_SCANCODE_R | WITH_CTRL: // ctrl-r
 			start_level = -1;
 #ifdef USE_MENU
