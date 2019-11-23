@@ -1078,12 +1078,10 @@ void pause_menu_clicked(pause_menu_item_type* item) {
 			need_close_menu = true;
 			break;
 		case PAUSE_MENU_SAVE_GAME:
-			// TODO: Manual save games?
 			if (Kid.alive < 0) need_save = 1;
 			need_close_menu = true;
 			break;
 		case PAUSE_MENU_LOAD_GAME:
-			// TODO: Manual save games?
 			need_load = 1;
 			need_close_menu = true;
 			stop_sounds();
