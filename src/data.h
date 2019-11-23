@@ -716,6 +716,7 @@ extern byte joystick_only_horizontal INIT(= 0);
 extern int joystick_threshold INIT(= 8000);
 extern byte enable_quicksave INIT(= 1);
 extern byte enable_quicksave_penalty INIT(= 1);
+extern byte can_load_anytime INIT(= 1);
 extern byte enable_replay INIT(= 1);
 extern byte use_correct_aspect_ratio INIT(= 0);
 extern byte use_integer_scaling INIT(= 0);

@@ -314,6 +314,7 @@ typedef void process_options_section_func_type(SDL_RWops* rw, rw_process_func_ty
 void options_process_features(SDL_RWops* rw, rw_process_func_type process_func) {
 	process(enable_copyprot);
 	process(enable_quicksave);
+	process(can_load_anytime);
 	process(enable_quicksave_penalty);
 }
 

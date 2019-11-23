@@ -156,6 +156,7 @@ enum setting_ids {
 	SETTING_ENABLE_COPYPROT,
 	SETTING_ENABLE_QUICKSAVE,
 	SETTING_ENABLE_QUICKSAVE_PENALTY,
+	SETTING_CAN_LOAD_ANYTIME,
 	SETTING_ENABLE_REPLAY,
 	SETTING_USE_FIXES_AND_ENHANCEMENTS,
 	SETTING_ENABLE_CROUCH_AFTER_CLIMBING,
@@ -373,6 +374,12 @@ setting_type gameplay_settings[] = {
 				.explanation = "Try to let time run out when quickloading (similar to dying).\n"
 						"Actually, the 'remaining time' will still be restored, "
 						"but a penalty (up to one minute) will be applied."},
+		{.id = SETTING_CAN_LOAD_ANYTIME, .style = SETTING_STYLE_TOGGLE, .linked = &can_load_anytime,
+				.text = "Can load anytime",
+				.explanation = "Always allow Ctrl+L to load, even during gameplay.\n"
+						"In the original PC version of Prince of Persia, "
+						"one could only load at the title screen "
+		 				"(by hitting Ctrl+R first)."},
 		{.id = SETTING_ENABLE_REPLAY, .style = SETTING_STYLE_TOGGLE, .linked = &enable_replay,
 				.text = "Enable replays",
 				.explanation = "Enable recording/replay feature.\n"
@@ -2000,6 +2007,7 @@ void process_ingame_settings_mod_managed(SDL_RWops* rw, rw_process_func_type pro
 	process(enable_copyprot);
 	process(enable_quicksave);
 	process(enable_quicksave_penalty);
+	process(can_load_anytime);
 	process(use_fixes_and_enhancements);
 	process(fixes_saved);
 	process(use_custom_options);

@@ -204,6 +204,7 @@ static int global_ini_callback(const char *section, const char *name, const char
 		process_boolean("enable_quicksave", &enable_quicksave);
 		process_boolean("enable_quicksave_penalty", &enable_quicksave_penalty);
 
+		process_boolean("can_load_anytime", &can_load_anytime);
 #ifdef USE_REPLAY
 		process_boolean("enable_replay", &enable_replay);
 
@@ -400,7 +401,8 @@ static int mod_ini_callback(const char *section, const char *name, const char *v
 		strncasecmp(section, "Level ", 6) == 0 ||
 		strcasecmp(name, "enable_copyprot") == 0 ||
 		strcasecmp(name, "enable_quicksave") == 0 ||
-		strcasecmp(name, "enable_quicksave_penalty") == 0
+		strcasecmp(name, "enable_quicksave_penalty") == 0 ||
+		strcasecmp(name, "can_load_anytime") == 0
 	) {
 		global_ini_callback(section, name, value);
 	}
@@ -426,6 +428,7 @@ void set_options_to_default() {
 	joystick_threshold = 8000;
 	enable_quicksave = 1;
 	enable_quicksave_penalty = 1;
+	can_load_anytime = 1;
 	enable_replay = 1;
 	enable_lighting = 0;
 	// By default, all the fixes are used, unless otherwise specified.
