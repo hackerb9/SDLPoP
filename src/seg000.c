@@ -2258,14 +2258,14 @@ const rect_type splash_text_2_rect = {50, 0, 200, 320};
 
 const char* splash_text_1 = "SDLPoP " SDLPOP_VERSION;
 const char* splash_text_2 =
-		"To save press Ctrl+G, to load press Ctrl+R, Ctrl+L.\n"
+		"To quick save/load, press F6/F9 in-game.\n"
 		"\n"
 #ifdef USE_REPLAY
 		"To record replays, press Ctrl+Tab in-game.\n"
 		"To view replays, press Tab on the title screen.\n"
 		"\n"
 #endif
-		"Press ESC for in-game menu and customization.\n"
+		"Edit SDLPoP.ini to customize SDLPoP.\n"
 		"Mods also work with SDLPoP.\n"
 		"\n"
 		"For more information, read doc/Readme.txt.\n"
