@@ -367,7 +367,11 @@ setting_type gameplay_settings[] = {
 				.explanation = "Enable or disable the potions (copy protection) level."},
 		{.id = SETTING_ENABLE_QUICKSAVE, .style = SETTING_STYLE_TOGGLE, .linked = &enable_quicksave,
 				.text = "Enable quicksave",
-				.explanation = "Enable quicksave/load feature.\nPress F6 to quicksave, F9 to quickload."},
+				.explanation = "Enable quicksave/load feature.\n"
+		 "Press F6 to quicksave, F9 to quickload. "
+		 "This makes the game easier than originally designed. "
+		 "Players who want to use traditional saving should use "
+		 "Ctrl+G to save and Ctrl+L to load."},
 		{.id = SETTING_ENABLE_QUICKSAVE_PENALTY, .style = SETTING_STYLE_TOGGLE, .linked = &enable_quicksave_penalty,
 				.text = "Quicksave time penalty",
 				.explanation = "Try to let time run out when quickloading (similar to dying).\n"
