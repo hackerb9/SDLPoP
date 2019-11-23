@@ -249,7 +249,7 @@ void check_saveload_op(){
 	}
 	if (need_load) {
 		need_load=0;
-		// First reset to main menu before loading.
+		// Close the menu and do a normal load.
 		start_level = -1;
 		#ifdef USE_MENU
 		if (is_menu_shown) menu_was_closed();
@@ -261,9 +261,6 @@ void check_saveload_op(){
 			display_text_bottom("LOAD FAILED");
 		}
 		start_game();
-
-
-
 	}
 	return;
 }
