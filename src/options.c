@@ -1,6 +1,6 @@
 /*
 SDLPoP, a port/conversion of the DOS game Prince of Persia.
-Copyright (C) 2013-2019  Dávid Nagy
+Copyright (C) 2013-2020  Dávid Nagy
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -66,8 +66,12 @@ int ini_load(const char *filename,
 				*s = 0;
 			report(section, name, value);
 		}
-		fscanf(f, " ;%*[^\n]");
-		fscanf(f, " \n");
+		if (fscanf(f, " ;%*[^\n]") != 0 ||
+		    fscanf(f, " \n") != 0) {
+			fprintf(stderr, "short read from %s!?\n", filename);
+			fclose(f);
+			return -1;
+		}
 	}
 
 	fclose(f);
@@ -195,6 +199,13 @@ static int global_ini_callback(const char *section, const char *name, const char
 			} else {
 				use_custom_levelset = 1;
 				strcpy(levelset_name, value);
+			}
+			return 1;
+		}
+
+		if (strcasecmp(name, "gamecontrollerdb_file") == 0) {
+			if (value[0] != '\0') {
+				strcpy(gamecontrollerdb_file, locate_file(value));
 			}
 			return 1;
 		}
@@ -436,8 +447,6 @@ void set_options_to_default() {
 	turn_custom_options_on_off(0);
 }
 
-void load_dos_exe_modifications(const char* folder_name);
-
 void load_global_options() {
 	set_options_to_default();
 	ini_load(locate_file("SDLPoP.ini"), global_ini_callback); // global configuration
@@ -452,7 +461,7 @@ void check_mod_param() {
 	if (mod_param != NULL) {
 		use_custom_levelset = true;
 		memset(levelset_name, 0, sizeof(levelset_name));
-		strncpy(levelset_name, mod_param, sizeof(levelset_name));
+		snprintf_check(levelset_name, sizeof(levelset_name), "%s", mod_param);
 	}
 }
 
@@ -521,7 +530,11 @@ void load_dos_exe_modifications(const char* folder_name) {
 	if (dos_version >= 0) {
 		turn_custom_options_on_off(1);
 		byte* exe_memory = malloc((size_t) info.st_size);
-		fread(exe_memory, (size_t) info.st_size, 1, fp);
+		if (fread(exe_memory, (size_t) info.st_size, 1, fp) != 1) {
+			fprintf(stderr, "Could not read %s!?\n", filename);
+			fclose(fp);
+			return;
+		}
 
 		byte temp_bytes[64] = {0};
 		word temp_word = 0;
@@ -654,6 +667,26 @@ void load_dos_exe_modifications(const char* folder_name) {
 		process(&custom_saved.win_level, 1, {0x011dc, 0x0288c, 0x01397, 0x01ad7, 0x01327, 0x02457});
 		process(&custom_saved.win_room, 1, {0x011e3, 0x02893, 0x0139e, 0x01ade, 0x0132e, 0x0245e});
 		process(&custom_saved.loose_floor_delay, 1, {0x9536, 0xABE6, -1, -1, -1, -1});
+
+		// guard skills
+		process(&custom_saved.strikeprob   , 2*NUM_GUARD_SKILLS, {-1, 0x1D3C2, -1, 0x1D2B4, -1, 0x19C5E});
+		process(&custom_saved.restrikeprob , 2*NUM_GUARD_SKILLS, {-1, 0x1D3DA, -1, 0x1D2CC, -1, 0x19C76});
+		process(&custom_saved.blockprob    , 2*NUM_GUARD_SKILLS, {-1, 0x1D3F2, -1, 0x1D2E4, -1, 0x19C8E});
+		process(&custom_saved.impblockprob , 2*NUM_GUARD_SKILLS, {-1, 0x1D40A, -1, 0x1D2FC, -1, 0x19CA6});
+		process(&custom_saved.advprob      , 2*NUM_GUARD_SKILLS, {-1, 0x1D422, -1, 0x1D314, -1, 0x19CBE});
+		process(&custom_saved.refractimer  , 2*NUM_GUARD_SKILLS, {-1, 0x1D43A, -1, 0x1D32C, -1, 0x19CD6});
+		process(&custom_saved.extrastrength, 2*NUM_GUARD_SKILLS, {-1, 0x1D452, -1, 0x1D344, -1, 0x19CEE});
+
+		// shadow's starting positions
+		process(&custom_saved.init_shad_6    , 8, {0x1B8B8, 0x1D47A, 0x1C6D5, 0x1D36C, 0x18AA7, 0x19D16});
+		process(&custom_saved.init_shad_5    , 8, {0x1B8C0, 0x1D482, 0x1C6DD, 0x1D374, 0x18AAF, 0x19D1E});
+		process(&custom_saved.init_shad_12   , 8, {     -1, 0x1D48A,      -1, 0x1D37C,      -1, 0x19D26}); // in the packed versions, the five zero bytes at the end are compressed
+		// automatic moves
+		process(&custom_saved.shad_drink_move,  8*4, {     -1, 0x1D492,      -1, 0x1D384,      -1, 0x19D2E}); // in the packed versions, the four zero bytes at the start are compressed
+		process(&custom_saved.demo_moves     , 25*4, {0x1B8EE, 0x1D4B2, 0x1C70B, 0x1D3A4, 0x18ADD, 0x19D4E});
+
+		// The order of offsets is: dos_10_packed, dos_10_unpacked, dos_13_packed, dos_13_unpacked, dos_14_packed, dos_14_unpacked
+
 #undef process
 		free(exe_memory);
 	}
@@ -667,7 +700,7 @@ void load_mod_options() {
 	if (use_custom_levelset) {
 		// find the folder containing the mod's files
 		char folder_name[POP_MAX_PATH];
-		snprintf(folder_name, sizeof(folder_name), "%s/%s", mods_folder, levelset_name);
+		snprintf_check(folder_name, sizeof(folder_name), "%s/%s", mods_folder, levelset_name);
 		const char* located_folder_name = locate_file(folder_name);
 		bool ok = false;
 		struct stat info;
@@ -675,12 +708,12 @@ void load_mod_options() {
 			if (S_ISDIR(info.st_mode)) {
 				// It's a directory
 				ok = true;
-				strncpy(mod_data_path, located_folder_name, sizeof(mod_data_path));
+				snprintf_check(mod_data_path, sizeof(mod_data_path), "%s", located_folder_name);
 				// Try to load PRINCE.EXE (DOS)
 				load_dos_exe_modifications(located_folder_name);
 				// Try to load mod.ini
 				char mod_ini_filename[POP_MAX_PATH];
-				snprintf(mod_ini_filename, sizeof(mod_ini_filename), "%s/%s", located_folder_name, "mod.ini");
+				snprintf_check(mod_ini_filename, sizeof(mod_ini_filename), "%s/%s", located_folder_name, "mod.ini");
 				if (file_exists(mod_ini_filename)) {
 					// Nearly all mods would want to use custom options, so always allow them.
 					use_custom_options = 1;
@@ -701,5 +734,13 @@ void load_mod_options() {
 	turn_custom_options_on_off(use_custom_options);
 }
 
+int process_rw_write(SDL_RWops* rw, void* data, size_t data_size) {
+	return SDL_RWwrite(rw, data, data_size, 1);
+}
+
+int process_rw_read(SDL_RWops* rw, void* data, size_t data_size) {
+	return SDL_RWread(rw, data, data_size, 1);
+	// if this returns 0, most likely the end of the stream has been reached
+}
 
 

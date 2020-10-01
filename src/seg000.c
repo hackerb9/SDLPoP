@@ -1,6 +1,6 @@
 /*
 SDLPoP, a port/conversion of the DOS game Prince of Persia.
-Copyright (C) 2013-2019  Dávid Nagy
+Copyright (C) 2013-2020  Dávid Nagy
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -331,6 +331,10 @@ int quick_process(process_func_type process_func) {
 	process(ctrl1_up);
 	process(ctrl1_down);
 	process(ctrl1_shift2);
+	// replay recording state
+#ifdef USE_REPLAY
+	process(curr_tick);
+#endif
 #undef process
 	return ok;
 }
@@ -344,7 +348,7 @@ const char* get_quick_path(char* custom_path_buffer, size_t max_len) {
 		return quick_file;
 	}
 	// if playing a custom levelset, try to use the mod folder
-	snprintf(custom_path_buffer, max_len, "%s/%s", mod_data_path, quick_file /*QUICKSAVE.SAV*/ );
+	snprintf_check(custom_path_buffer, max_len, "%s/%s", mod_data_path, quick_file /*QUICKSAVE.SAV*/ );
 	return custom_path_buffer;
 }
 
@@ -456,11 +460,13 @@ void check_quick_op() {
 		text_time_remaining = 24;
 	}
 	if (need_quick_load) {
+/*
 #ifdef USE_REPLAY
 		if (recording) {
 			stop_recording(); // quickloading would mess up the replay!
 		}
 #endif
+*/
 		if (quick_load()) {
 			display_text_bottom("QUICKLOAD");
 		} else {
@@ -727,8 +733,10 @@ int __pascal far process_key() {
 				}
 			break;
 			case SDL_SCANCODE_K: // K --> kill guard cheat
-				guardhp_delta = -guardhp_curr;
-				Guard.alive = 0;
+				if (Guard.charid != charid_4_skeleton) {
+					guardhp_delta = -guardhp_curr;
+					Guard.alive = 0;
+				}
 			break;
 			case SDL_SCANCODE_I | WITH_SHIFT: // shift+I --> invert cheat
 				toggle_upside();
@@ -1222,7 +1230,13 @@ void get_joystick_state(int raw_x, int raw_y, int axis_state[2]) {
 
 	// check if the X/Y position is within the 'dead zone' of the joystick
 	int dist_squared = raw_x*raw_x + raw_y*raw_y;
-	if (dist_squared < joystick_threshold*joystick_threshold) {
+	// FIXED: Left jump (top-left) didn't work on some gamepads.
+	// On some gamepads, raw_x = raw_y = -32768 in the top-left corner.
+	// In this case, dist_squared is calculated as -32768 * -32768 + -32768 * -32768 = 2147483648.
+	// But dist_squared is a 32-bit signed integer, which cannot store that number, so it overflows to -2147483648.
+	// Therefore, dist_squared < joystick_threshold*joystick_threshold becomes true, and the game thinks the stick is centered.
+	// To fix this, we cast both sides of the comparison to an unsigned 32-bit type.
+	if ((dword)dist_squared < (dword)(joystick_threshold*joystick_threshold)) {
 		axis_state[0] = 0;
 		axis_state[1] = 0;
 	} else {
@@ -1764,9 +1778,7 @@ const rect_type rect_titles = {106,24,195,296};
 
 // seg000:17E6
 void __pascal far show_title() {
-	word textcolor;
 	load_opt_sounds(sound_50_story_2_princess, sound_55_story_1_absence); // main theme, story, princess door
-	textcolor = get_text_color(15, color_15_brightwhite, 0x800);
 	dont_reset_time = 0;
 	if(offscreen_surface) free_surface(offscreen_surface); // missing in original
 	offscreen_surface = make_offscreen_buffer(&screen_rect);
@@ -1775,41 +1787,41 @@ void __pascal far show_title() {
 	idle(); // modified
 	do_paused();
 
-	draw_image_2(0 /*main title image*/, chtab_title50, 0, 0, blitters_0_no_transp);
+	draw_full_image(TITLE_MAIN);
 	fade_in_2(offscreen_surface, 0x1000); //STUB
 	method_1_blit_rect(onscreen_surface_, offscreen_surface, &screen_rect, &screen_rect, blitters_0_no_transp);
 	current_sound = sound_54_intro_music; // added
 	play_sound_from_buffer(sound_pointers[sound_54_intro_music]); // main theme
 	start_timer(timer_0, 0x82);
-	draw_image_2(1 /*Broderbund Software presents*/, chtab_title50, 96, 106, blitters_0_no_transp);
+	draw_full_image(TITLE_PRESENTS);
 	do_wait(timer_0);
 
 	start_timer(timer_0, 0xCD);
 	method_1_blit_rect(onscreen_surface_, offscreen_surface, &rect_titles, &rect_titles, blitters_0_no_transp);
-	draw_image_2(0 /*main title image*/, chtab_title50, 0, 0, blitters_0_no_transp);
+	draw_full_image(TITLE_MAIN);
 	do_wait(timer_0);
 
 	start_timer(timer_0, 0x41);
 	method_1_blit_rect(onscreen_surface_, offscreen_surface, &rect_titles, &rect_titles, blitters_0_no_transp);
-	draw_image_2(0 /*main title image*/, chtab_title50, 0, 0, blitters_0_no_transp);
-	draw_image_2(2 /*a game by Jordan Mechner*/, chtab_title50, 96, 122, blitters_0_no_transp);
+	draw_full_image(TITLE_MAIN);
+	draw_full_image(TITLE_GAME);
 	do_wait(timer_0);
 
 	start_timer(timer_0, 0x10E);
 	method_1_blit_rect(onscreen_surface_, offscreen_surface, &rect_titles, &rect_titles, blitters_0_no_transp);
-	draw_image_2(0 /*main title image*/, chtab_title50, 0, 0, blitters_0_no_transp);
+	draw_full_image(TITLE_MAIN);
 	do_wait(timer_0);
 
 	start_timer(timer_0, 0xEB);
 	method_1_blit_rect(onscreen_surface_, offscreen_surface, &rect_titles, &rect_titles, blitters_0_no_transp);
-	draw_image_2(0 /*main title image*/, chtab_title50, 0, 0, blitters_0_no_transp);
-	draw_image_2(3 /*Prince Of Persia*/, chtab_title50, 24, 107, blitters_10h_transp);
-	draw_image_2(4 /*Copyright 1990 Jordan Mechner*/, chtab_title50, 48, 184, blitters_0_no_transp);
+	draw_full_image(TITLE_MAIN);
+	draw_full_image(TITLE_POP);
+	draw_full_image(TITLE_MECHNER);
 	do_wait(timer_0);
 
 	method_1_blit_rect(onscreen_surface_, offscreen_surface, &rect_titles, &rect_titles, blitters_0_no_transp);
-	draw_image_2(0 /*story frame*/, chtab_title40, 0, 0, blitters_0_no_transp);
-	draw_image_2(1 /*In the Sultan's absence*/, chtab_title40, 24, 25, textcolor);
+	draw_full_image(STORY_FRAME);
+	draw_full_image(STORY_ABSENCE);
 	current_target_surface = onscreen_surface_;
 	while (check_sound_playing()) {
 		idle();
@@ -1827,12 +1839,12 @@ void __pascal far show_title() {
 
 	load_title_images(1);
 	current_target_surface = offscreen_surface;
-	draw_image_2(0 /*story frame*/, chtab_title40, 0, 0, blitters_0_no_transp);
-	draw_image_2(2 /*Marry Jaffar*/, chtab_title40, 24, 25, textcolor);
+	draw_full_image(STORY_FRAME);
+	draw_full_image(STORY_MARRY);
 	fade_in_2(offscreen_surface, 0x800);
-	draw_image_2(0 /*main title image*/, chtab_title50, 0, 0, blitters_0_no_transp);
-	draw_image_2(3 /*Prince Of Persia*/, chtab_title50, 24, 107, blitters_10h_transp);
-	draw_image_2(4 /*Copyright 1990 Jordan Mechner*/, chtab_title50, 48, 184, blitters_0_no_transp);
+	draw_full_image(TITLE_MAIN);
+	draw_full_image(TITLE_POP);
+	draw_full_image(TITLE_MECHNER);
 	while (check_sound_playing()) {
 		idle();
 		do_paused();
@@ -1840,13 +1852,13 @@ void __pascal far show_title() {
 	}
 	transition_ltr();
 	pop_wait(timer_0, 0x78);
-	draw_image_2(0 /*story frame*/, chtab_title40, 0, 0, blitters_0_no_transp);
-	draw_image_2(4 /*credits*/, chtab_title40, 24, 26, textcolor);
+	draw_full_image(STORY_FRAME);
+	draw_full_image(STORY_CREDITS);
 	transition_ltr();
 	pop_wait(timer_0, 0x168);
 	if (hof_count) {
-		draw_image_2(0 /*story frame*/, chtab_title40, 0, 0, blitters_0_no_transp);
-		draw_image_2(3 /*Prince Of Persia*/, chtab_title50, 24, 24, blitters_10h_transp);
+		draw_full_image(STORY_FRAME);
+		draw_full_image(HOF_POP);
 		show_hof();
 		transition_ltr();
 		pop_wait(timer_0, 0xF0);
@@ -1919,17 +1931,26 @@ void __pascal far release_title_images() {
 }
 
 // seg000:1C3A
-void __pascal far draw_image_2(int id, chtab_type* chtab_ptr, int xpos, int ypos, int blit) {
-	image_type* source;
+void __pascal far draw_full_image(enum full_image_id id) {
 	image_type* decoded_image;
-	image_type* mask;
-	mask = NULL;
-	if (NULL == chtab_ptr) return;
-	source = chtab_ptr->images[id];
-	decoded_image = source;
-	if (blit != blitters_0_no_transp && blit != blitters_10h_transp) {
+	image_type* mask = NULL;
+	int xpos, ypos, blit;
+
+	if (id >= MAX_FULL_IMAGES) return;
+	if (NULL == *full_image[id].chtab) return;
+	decoded_image = (*full_image[id].chtab)->images[full_image[id].id];
+	blit = full_image[id].blitter;
+	xpos = full_image[id].xpos;
+	ypos = full_image[id].ypos;
+
+	switch (blit) {
+	case blitters_white:
+		blit = get_text_color(15, color_15_brightwhite, 0x800);
+		/* fall through */
+	default:
 		method_3_blit_mono(decoded_image, xpos, ypos, blitters_0_no_transp, blit);
-	} else if (blit == blitters_10h_transp) {
+		break;
+	case blitters_10h_transp:
 		if (graphics_mode == gmCga || graphics_mode == gmHgaHerc) {
 			//...
 		} else {
@@ -1939,8 +1960,10 @@ void __pascal far draw_image_2(int id, chtab_type* chtab_ptr, int xpos, int ypos
 		if (graphics_mode == gmCga || graphics_mode == gmHgaHerc) {
 			free_far(mask);
 		}
-	} else {
+		break;
+	case blitters_0_no_transp:
 		method_6_blit_img_to_scr(decoded_image, xpos, ypos, blit);
+		break;
 	}
 }
 
@@ -1956,34 +1979,33 @@ const char* get_save_path(char* custom_path_buffer, size_t max_len) {
 		return save_file;
 	}
 	// if playing a custom levelset, try to use the mod folder
-	snprintf(custom_path_buffer, max_len, "%s/%s", mod_data_path, save_file /*PRINCE.SAV*/ );
+	snprintf_check(custom_path_buffer, max_len, "%s/%s", mod_data_path, save_file /*PRINCE.SAV*/ );
 	return custom_path_buffer;
 }
 
 // seg000:1D45
 void __pascal far save_game() {
 	word success;
-	int handle;
+	FILE* handle;
 	success = 0;
 	char custom_save_path[POP_MAX_PATH];
 	const char* save_path = get_save_path(custom_save_path, sizeof(custom_save_path));
-	// no O_TRUNC
-	handle = open(save_path, O_WRONLY | O_CREAT | O_BINARY, 0600);
-	if (handle == -1) goto loc_1DB8;
-	if (write(handle, &rem_min, 2) == 2) goto loc_1DC9;
+	handle = fopen(save_path, "wb");
+	if (handle == NULL) goto loc_1DB8;
+	if (fwrite(&rem_min, 1, 2, handle) == 2) goto loc_1DC9;
 	loc_1D9B:
-	close(handle);
+	fclose(handle);
 	if (!success) {
-		unlink(save_path);
+		remove(save_path);
 	}
 	loc_1DB8:
 	if (!success) goto loc_1E18;
 	display_text_bottom("GAME SAVED");
 	goto loc_1E2E;
 	loc_1DC9:
-	if (write(handle, &rem_tick, 2) != 2) goto loc_1D9B;
-	if (write(handle, &current_level, 2) != 2) goto loc_1D9B;
-	if (write(handle, &hitp_beg_lev, 2) != 2) goto loc_1D9B;
+	if (fwrite(&rem_tick, 1, 2, handle) != 2) goto loc_1D9B;
+	if (fwrite(&current_level, 1, 2, handle) != 2) goto loc_1D9B;
+	if (fwrite(&hitp_beg_lev, 1, 2, handle) != 2) goto loc_1D9B;
 	success = 1;
 	goto loc_1D9B;
 	loc_1E18:
@@ -1995,22 +2017,22 @@ void __pascal far save_game() {
 
 // seg000:1E38
 short __pascal far load_game() {
-	int handle;
 	word success;
+	FILE* handle;
 	success = 0;
 	char custom_save_path[POP_MAX_PATH];
 	const char* save_path = get_save_path(custom_save_path, sizeof(custom_save_path));
-	handle = open(save_path, O_RDONLY | O_BINARY);
-	if (handle == -1) goto loc_1E99;
-	if (read(handle, &rem_min, 2) == 2) goto loc_1E9E;
+	handle = fopen(save_path, "rb");
+	if (handle == NULL) goto loc_1E99;
+	if (fread(&rem_min, 1, 2, handle) == 2) goto loc_1E9E;
 	loc_1E8E:
-	close(handle);
+	fclose(handle);
 	loc_1E99:
 	return success;
 	loc_1E9E:
-	if (read(handle, &rem_tick, 2) != 2) goto loc_1E8E;
-	if (read(handle, &start_level, 2) != 2) goto loc_1E8E;
-	if (read(handle, &hitp_beg_lev, 2) != 2) goto loc_1E8E;
+	if (fread(&rem_tick, 1, 2, handle) != 2) goto loc_1E8E;
+	if (fread(&start_level, 1, 2, handle) != 2) goto loc_1E8E;
+	if (fread(&hitp_beg_lev, 1, 2, handle) != 2) goto loc_1E8E;
 #ifdef USE_COPYPROT
 	if (enable_copyprot && custom->copyprot_level > 0) {
 		custom->copyprot_level = start_level;

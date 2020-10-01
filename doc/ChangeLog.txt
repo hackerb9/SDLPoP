@@ -540,8 +540,31 @@ FIXED: Fix priorities of sword and spike sounds. (As in PoP 1.3.)
 	The "spiked" sound didn't interrupt the normal spikes sound when the prince ran into spikes.
 	With PoP 1.3 sounds, the "guard hurt" sound didn't play when you hit a guard directly after parrying.
 
+2020 August 20
+=================
+(version 1.21)
+
+FIXED: Skeletons not on level 3 did not behave like skeletons.
+FIXED: Don't crash if the intro music is interrupted by Tab in PC Speaker mode.
+FIXED: Don't switch to PC Speaker mode if there is a mod name in the replay file.
+DONE: Detect guard skill customizations in PRINCE.EXE. (Used in Illusions of Persia, for example.)
+	TODO: Should we add the guard skill options to the INI, the CFG, the replays, or the settings menu?
+FIXED: Don't draw the right edge of loose floors on the left side of a potion or sword.
+FIXED: A guard standing on a door top (with floor) should not become inactive.
+FIXED: Left jump (top-left) didn't work on some gamepads.
+FIXED: Replaying from the command line did not work if there were no replay files in the replay folder.
+DONE: Added support for gamecontrollerdb.txt file.
+DONE: Detect changes of the shadow's starting positions and automatic moves in PRINCE.EXE.
+DONE: Added "Restart Game" to the pause menu, so now it's possible to restart the game using a controller.
+DONE: Added fast forward.
+	TODO: Speed up music and sound effects during fast forwarding.
+ADDED: You can now use quicksave and quickload while recording a replay.
+	TODO: Verify that the quickloaded state is from the currently running recording.
+
 (no release date yet)
 =================
 (upcoming version)
 
-FIXED: Skeletons not on level 3 did not behave like skeletons.
+FIXED: The prince can now grab a ledge at the bottom right corner of a room with no room below.
+	Details: https://forum.princed.org/viewtopic.php?p=30410#p30410
+FIXED: Don't allow killing a skeleton in cheat mode.

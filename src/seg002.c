@@ -1,6 +1,6 @@
 /*
 SDLPoP, a port/conversion of the DOS game Prince of Persia.
-Copyright (C) 2013-2019  Dávid Nagy
+Copyright (C) 2013-2020  Dávid Nagy
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@ The authors of this program may be contacted at https://forum.princed.org
 
 #include "common.h"
 
+// These were moved to custom_options_type.
+/*
 // data:0E32
 const word strikeprob  [] = { 61,100, 61, 61, 61, 40,100,220,  0, 48, 32, 48};
 // data:0E4A
@@ -34,6 +36,7 @@ const word advprob     [] = {255,200,200,200,255,255,200,  0,  0,255,100,100};
 const word refractimer [] = { 16, 16, 16, 16,  8,  8,  8,  8,  0,  8,  0,  0};
 // data:0EC2
 const word extrastrength[] = {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0};
+*/
 
 // seg002:0000
 void __pascal far do_init_shad(const byte *source,int seq_index) {
@@ -48,15 +51,18 @@ void __pascal far do_init_shad(const byte *source,int seq_index) {
 
 // seg002:0044
 void __pascal far get_guard_hp() {
-	guardhp_delta = guardhp_curr = guardhp_max = extrastrength[guard_skill] + custom->tbl_guard_hp[current_level];
+	guardhp_delta = guardhp_curr = guardhp_max = custom->extrastrength[guard_skill] + custom->tbl_guard_hp[current_level];
 }
 
+// These were moved to custom_options_type.
+/*
 // data:0EEA
 const byte init_shad_6[] = {0x0F, 0x51, 0x76, 0, 0, 1, 0, 0};
 // data:0EF2
 const byte init_shad_5[] = {0x0F, 0x37, 0x37, 0, 0xFF, 0, 0, 0};
 // data:0EFA
 const byte init_shad_12[] = {0x0F, 0x51, 0xE8, 0, 0, 0, 0, 0};
+*/
 
 // seg002:0064
 void __pascal far check_shadow() {
@@ -69,7 +75,7 @@ void __pascal far check_shadow() {
 				return;
 			}
 			shadow_initialized = 0;
-			do_init_shad(/*&*/init_shad_12, 7 /*fall*/);
+			do_init_shad(/*&*/custom->init_shad_12, 7 /*fall*/);
 			return;
 		}
 	} else if (current_level == 6) {
@@ -80,7 +86,7 @@ void __pascal far check_shadow() {
 				play_sound(sound_25_presentation); // presentation (level 6 shadow)
 				leveldoor_open = 0x4D;
 			}
-			do_init_shad(/*&*/init_shad_6, 2 /*stand*/);
+			do_init_shad(/*&*/custom->init_shad_6, 2 /*stand*/);
 			return;
 		}
 	} else if (current_level == 5) {
@@ -90,7 +96,7 @@ void __pascal far check_shadow() {
 			if (get_tile(24, 3, 0) != tiles_10_potion) {
 				return;
 			}
-			do_init_shad(/*&*/init_shad_5, 2 /*stand*/);
+			do_init_shad(/*&*/custom->init_shad_5, 2 /*stand*/);
 			return;
 		}
 	}
@@ -202,7 +208,7 @@ void __pascal far enter_guard() {
 	}
 	play_seq();
 	guard_skill = level.guards_skill[room_minus_1];
-	if (guard_skill >= 12) {
+	if (guard_skill >= NUM_GUARD_SKILLS) {
 		guard_skill = 3;
 	}
 	frame = Char.frame;
@@ -838,7 +844,7 @@ void __pascal far autocontrol_guard_kid_armed(short distance) {
 // seg002:0AF5
 void __pascal far guard_advance() {
 	if (guard_skill == 0 || kid_sword_strike == 0) {
-		if (advprob[guard_skill] > prandom(255)) {
+		if (custom->advprob[guard_skill] > prandom(255)) {
 			move_1_forward();
 		}
 	}
@@ -850,11 +856,11 @@ void __pascal far guard_block() {
 	opp_frame = Opp.frame;
 	if (opp_frame == frame_152_strike_2 || opp_frame == frame_153_strike_3 || opp_frame == frame_162_block_to_strike) {
 		if (justblocked != 0) {
-			if (impblockprob[guard_skill] > prandom(255)) {
+			if (custom->impblockprob[guard_skill] > prandom(255)) {
 				move_3_up();
 			}
 		} else {
-			if (blockprob[guard_skill] > prandom(255)) {
+			if (custom->blockprob[guard_skill] > prandom(255)) {
 				move_3_up();
 			}
 		}
@@ -869,11 +875,11 @@ void __pascal far guard_strike() {
 	if (opp_frame == frame_169_begin_block || opp_frame == frame_151_strike_1) return;
 	char_frame = Char.frame;
 	if (char_frame == frame_161_parry || char_frame == frame_150_parry) {
-		if (restrikeprob[guard_skill] > prandom(255)) {
+		if (custom->restrikeprob[guard_skill] > prandom(255)) {
 			move_6_shift();
 		}
 	} else {
-		if (strikeprob[guard_skill] > prandom(255)) {
+		if (custom->strikeprob[guard_skill] > prandom(255)) {
 			move_6_shift();
 		}
 	}
@@ -930,7 +936,7 @@ void __pascal far check_sword_hurt() {
 		loadshad();
 		hurt_by_sword();
 		saveshad();
-		guard_refrac = refractimer[guard_skill];
+		guard_refrac = custom->refractimer[guard_skill];
 	} else {
 		if (Kid.action == actions_99_hurt) {
 			loadkid();
@@ -1095,6 +1101,8 @@ void __pascal far autocontrol_shadow_level4() {
 	}
 }
 
+// This was moved to custom_options_type.
+/*
 // data:0F02
 const auto_move_type shad_drink_move[] = {
 {0x00, 0},
@@ -1106,6 +1114,7 @@ const auto_move_type shad_drink_move[] = {
 {0x31, 1},
 {0xFF,-2},
 };
+*/
 
 // seg002:101A
 void __pascal far autocontrol_shadow_level5() {
@@ -1116,7 +1125,7 @@ void __pascal far autocontrol_shadow_level5() {
 			if (curr_room_modif[curr_tilepos] < 80) return;
 			demo_index = 0;
 		}
-		do_auto_moves(shad_drink_move);
+		do_auto_moves(custom->shad_drink_move);
 		if (Char.x < 15) {
 			clear_char();
 		}
@@ -1140,7 +1149,7 @@ void __pascal far autocontrol_shadow_level12() {
 	short xdiff;
 	if (Char.room == 15 && shadow_initialized == 0) {
 		if (Opp.x >= 150) {
-			do_init_shad(/*&*/init_shad_12, 7 /*fall*/);
+			do_init_shad(/*&*/custom->init_shad_12, 7 /*fall*/);
 			return;
 		}
 		shadow_initialized = 1;

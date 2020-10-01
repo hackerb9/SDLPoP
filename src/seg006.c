@@ -1,6 +1,6 @@
 /*
 SDLPoP, a port/conversion of the DOS game Prince of Persia.
-Copyright (C) 2013-2019  Dávid Nagy
+Copyright (C) 2013-2020  Dávid Nagy
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -45,6 +45,16 @@ int __pascal far get_tile(int room,int col,int row) {
 // seg006:005D
 int __pascal far find_room_of_tile() {
 	again:
+	// Check tile_row < 0 first, this way the prince can grab a ledge at the bottom right corner of a room with no room below.
+	// Details: https://forum.princed.org/viewtopic.php?p=30410#p30410
+	if (tile_row < 0) {
+		tile_row += 3;
+		if (curr_room) {
+			curr_room = level.roomlinks[curr_room - 1].up;
+		}
+		//find_room_of_tile();
+		goto again;
+	}
 	if (tile_col < 0) {
 		tile_col += 10;
 		if (curr_room) {
@@ -52,21 +62,17 @@ int __pascal far find_room_of_tile() {
 		}
 		//find_room_of_tile();
 		goto again;
-	} else if (tile_col >= 10) {
+	}
+	if (tile_col >= 10) {
 		tile_col -= 10;
 		if (curr_room) {
 			curr_room = level.roomlinks[curr_room - 1].right;
 		}
 		//find_room_of_tile();
 		goto again;
-	} else if (tile_row < 0) {
-		tile_row += 3;
-		if (curr_room) {
-			curr_room = level.roomlinks[curr_room - 1].up;
-		}
-		//find_room_of_tile();
-		goto again;
-	} else if (tile_row >= 3) {
+	}
+	// if (tile_row < 0) was here originally
+	if (tile_row >= 3) {
 		tile_row -= 3;
 		if (curr_room) {
 			curr_room = level.roomlinks[curr_room - 1].down;
@@ -1256,6 +1262,8 @@ void __pascal far control_kid() {
 	}
 }
 
+// This was moved to custom_options_type.
+/*
 const auto_move_type demo_moves[] = {
 {0x00, 0},
 {0x01, 1},
@@ -1283,6 +1291,7 @@ const auto_move_type demo_moves[] = {
 {0xCD, 0},
 {0xE9,-1},
 };
+*/
 
 // seg006:0D49
 void __pascal far do_demo() {
@@ -1294,7 +1303,7 @@ void __pascal far do_demo() {
 		autocontrol_opponent();
 		guard_skill = 11;
 	} else {
-		do_auto_moves(demo_moves);
+		do_auto_moves(custom->demo_moves);
 	}
 }
 

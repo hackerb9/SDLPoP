@@ -91,7 +91,7 @@ else()
     # NOTE: Currently, the SDL2 and SDL2_image frameworks are not being correctly included/linked in the bundle!
     #       As long as this isn't fixed, these bundles will only work if SDL2 and SDL2_image are installed.
 
-    set (SDLPoP_VERSION "1.20")
+    set (SDLPoP_VERSION "1.21")
     set (MACOSX_BUNDLE_INFO_STRING          ${PROJECT_NAME})
     set (MACOSX_BUNDLE_ICON_FILE            "icon.icns")
     set_source_files_properties(${MACOSX_BUNDLE_ICON_FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
@@ -115,7 +115,7 @@ endif()
 
 if(WIN32)
     target_link_libraries(prince mingw32 SDL2main SDL2 SDL2_image)
-elif(APPLE)
+elseif(APPLE)
     target_link_libraries(prince SDL2main SDL2 SDL2_image m)
 else() # Linux, *BSD, etc.
     target_link_libraries(prince SDL2 SDL2_image m)

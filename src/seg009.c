@@ -1,6 +1,6 @@
 /*
 SDLPoP, a port/conversion of the DOS game Prince of Persia.
-Copyright (C) 2013-2019  Dávid Nagy
+Copyright (C) 2013-2020  Dávid Nagy
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@ bool found_exe_dir = false;
 
 void find_exe_dir() {
 	if (found_exe_dir) return;
-	strncpy(exe_dir, g_argv[0], sizeof(exe_dir));
+	snprintf_check(exe_dir, sizeof(exe_dir), "%s", g_argv[0]);
 	char* last_slash = NULL;
 	char* pos = exe_dir;
 	for (char c = *pos; c != '\0'; c = *(++pos)) {
@@ -67,7 +67,7 @@ const char* locate_file_(const char* filename, char* path_buffer, int buffer_siz
 		// If failed, it may be that SDLPoP is being run from the wrong different working directory.
 		// We can try to rescue the situation by loading from the directory of the executable.
 		find_exe_dir();
-        snprintf(path_buffer, buffer_size, "%s/%s", exe_dir, filename);
+        snprintf_check(path_buffer, buffer_size, "%s/%s", exe_dir, filename);
         return (const char*) path_buffer;
 	}
 }
@@ -119,7 +119,7 @@ struct directory_listing_type {
 directory_listing_type* create_directory_listing_and_find_first_file(const char* directory, const char* extension) {
 	directory_listing_type* directory_listing = calloc(1, sizeof(directory_listing_type));
 	char search_pattern[POP_MAX_PATH];
-	snprintf(search_pattern, POP_MAX_PATH, "%s/*.%s", directory, extension);
+	snprintf_check(search_pattern, POP_MAX_PATH, "%s/*.%s", directory, extension);
 	WCHAR* search_pattern_UTF16 = WIN_UTF8ToString(search_pattern);
 	directory_listing->search_handle = FindFirstFileW( search_pattern_UTF16, &directory_listing->find_data );
 	SDL_free(search_pattern_UTF16);
@@ -327,11 +327,11 @@ static FILE* open_dat_from_root_or_data_dir(const char* filename) {
 	// if failed, try if the DAT file can be opened in the data/ directory, instead of the main folder
 	if (fp == NULL) {
 		char data_path[POP_MAX_PATH];
-		snprintf(data_path, sizeof(data_path), "data/%s", filename);
+		snprintf_check(data_path, sizeof(data_path), "data/%s", filename);
 
         if (!file_exists(data_path)) {
             find_exe_dir();
-            snprintf(data_path, sizeof(data_path), "%s/data/%s", exe_dir, filename);
+            snprintf_check(data_path, sizeof(data_path), "%s/data/%s", exe_dir, filename);
         }
 
 		// verify that this is a regular file and not a directory (otherwise, don't open)
@@ -354,7 +354,7 @@ dat_type *__pascal open_dat(const char *filename,int drive) {
 		if (!skip_mod_data_files) {
 			char filename_mod[POP_MAX_PATH];
 			// before checking the root directory, first try mods/MODNAME/
-			snprintf(filename_mod, sizeof(filename_mod), "%s/%s", mod_data_path, filename);
+			snprintf_check(filename_mod, sizeof(filename_mod), "%s/%s", mod_data_path, filename);
 			fp = fopen(filename_mod, "rb");
 		}
 		if (fp == NULL && !skip_normal_data_files) {
@@ -365,7 +365,7 @@ dat_type *__pascal open_dat(const char *filename,int drive) {
 	dat_table_type* dat_table = NULL;
 
 	dat_type* pointer = (dat_type*) calloc(1, sizeof(dat_type));
-	strncpy(pointer->filename, filename, sizeof(pointer->filename));
+	snprintf_check(pointer->filename, sizeof(pointer->filename), "%s", filename);
 	pointer->next_dat = dat_chain_ptr;
 	dat_chain_ptr = pointer;
 
@@ -796,6 +796,10 @@ int __pascal far set_joy_mode() {
 	if (SDL_NumJoysticks() < 1) {
 		is_joyst_mode = 0;
 	} else {
+		if (gamecontrollerdb_file[0] != '\0') {
+			SDL_GameControllerAddMappingsFromFile(gamecontrollerdb_file);
+		}
+
 		if (SDL_IsGameController(0)) {
 			sdl_controller_ = SDL_GameControllerOpen(0);
 			if (sdl_controller_ == NULL) {
@@ -1943,7 +1947,6 @@ void init_digi() {
 
 const int sound_channel = 0;
 const int max_sound_id = 58;
-char** sound_names = NULL;
 
 void load_sound_names() {
 	const char* names_path = locate_file("data/music/names.txt");
@@ -1992,11 +1995,11 @@ sound_buffer_type* load_sound(int index) {
 				char filename[POP_MAX_PATH];
 				if (!skip_mod_data_files) {
 					// before checking the root directory, first try mods/MODNAME/
-					snprintf(filename, sizeof(filename), "%s/music/%s.ogg", mod_data_path, sound_name(index));
+					snprintf_check(filename, sizeof(filename), "%s/music/%s.ogg", mod_data_path, sound_name(index));
 					fp = fopen(filename, "rb");
 				}
 				if (fp == NULL && !skip_normal_data_files) {
-					snprintf(filename, sizeof(filename), "data/music/%s.ogg", sound_name(index));
+					snprintf_check(filename, sizeof(filename), "data/music/%s.ogg", sound_name(index));
 					fp = fopen(locate_file(filename), "rb");
 				}
 				if (fp == NULL) {
@@ -2340,7 +2343,12 @@ void __pascal far set_gr_mode(byte grmode) {
 	                           pop_window_width, pop_window_height, flags);
 	// Make absolutely sure that VSync will be off, to prevent timer issues.
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
-	renderer_ = SDL_CreateRenderer(window_, -1 , SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
+#ifdef USE_HW_ACCELERATION
+	const Uint32 RENDER_BACKEND = SDL_RENDERER_ACCELERATED;
+#else
+	const Uint32 RENDER_BACKEND = SDL_RENDERER_SOFTWARE;
+#endif
+	renderer_ = SDL_CreateRenderer(window_, -1 , RENDER_BACKEND | SDL_RENDERER_TARGETTEXTURE);
 	SDL_RendererInfo renderer_info;
 	if (SDL_GetRendererInfo(renderer_, &renderer_info) == 0) {
 		if (renderer_info.flags & SDL_RENDERER_TARGETTEXTURE) {
@@ -2572,7 +2580,7 @@ void load_from_opendats_metadata(int resource_id, const char* extension, FILE** 
 			if (len >= 5 && filename_no_ext[len-4] == '.') {
 				filename_no_ext[len-4] = '\0'; // terminate, so ".DAT" is deleted from the filename
 			}
-			snprintf(image_filename,sizeof(image_filename),"data/%s/res%d.%s",filename_no_ext, resource_id, extension);
+			snprintf_check(image_filename,sizeof(image_filename),"data/%s/res%d.%s",filename_no_ext, resource_id, extension);
 			if (!use_custom_levelset) {
 				//printf("loading (binary) %s",image_filename);
 				fp = fopen(locate_file(image_filename), "rb");
@@ -2581,7 +2589,7 @@ void load_from_opendats_metadata(int resource_id, const char* extension, FILE** 
 				if (!skip_mod_data_files) {
 					char image_filename_mod[POP_MAX_PATH];
 					// before checking data/, first try mods/MODNAME/data/
-					snprintf(image_filename_mod, sizeof(image_filename_mod), "%s/%s", mod_data_path, image_filename);
+					snprintf_check(image_filename_mod, sizeof(image_filename_mod), "%s/%s", mod_data_path, image_filename);
 					//printf("loading (binary) %s",image_filename_mod);
 					fp = fopen(locate_file(image_filename_mod), "rb");
 				}
@@ -3073,6 +3081,10 @@ void process_events() {
 				int scancode = event.key.keysym.scancode;
 
 				// Handle these separately, so they won't interrupt things that are usually interrupted by a keypress. (pause, cutscene)
+				if (scancode == SDL_SCANCODE_GRAVE) {
+					init_timer(60 * 10); // fast-forward on
+					break;
+				}
 #ifdef USE_SCREENSHOT
 				if (scancode == SDL_SCANCODE_F12) {
 					if (modifier & KMOD_SHIFT) {
@@ -3117,6 +3129,9 @@ void process_events() {
 						case SDL_SCANCODE_PRINTSCREEN:
 						case SDL_SCANCODE_VOLUMEUP:
 						case SDL_SCANCODE_VOLUMEDOWN:
+						// Why are there two mute key codes?
+						case SDL_SCANCODE_MUTE:
+						case SDL_SCANCODE_AUDIOMUTE:
 						case SDL_SCANCODE_PAUSE:
 							break;
 
@@ -3161,6 +3176,11 @@ void process_events() {
 			case SDL_KEYUP:
 				// If Alt was held down from Alt+Tab but now it's released: stop ignoring Tab.
 				if (event.key.keysym.scancode == SDL_SCANCODE_TAB && ignore_tab) ignore_tab = false;
+
+				if (event.key.keysym.scancode == SDL_SCANCODE_GRAVE) {
+					init_timer(60); // fast-forward off
+					break;
+				}
 
 				key_states[event.key.keysym.scancode] = 0;
 #ifdef USE_MENU
@@ -3246,7 +3266,7 @@ void process_events() {
 					}
 					// Disregard SDL_JOYAXISMOTION events within joystick 'dead zone'
 					int joy_x = joy_axis[SDL_CONTROLLER_AXIS_LEFTX];
-					int joy_y = joy_axis[SDL_CONTROLLER_AXIS_LEFTX];
+					int joy_y = joy_axis[SDL_CONTROLLER_AXIS_LEFTY];
 					if ((dword)(joy_x*joy_x) + (dword)(joy_y*joy_y) < (dword)(joystick_threshold*joystick_threshold)) {
 						break;
 					}

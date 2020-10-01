@@ -1,6 +1,6 @@
 /*
 SDLPoP, a port/conversion of the DOS game Prince of Persia.
-Copyright (C) 2013-2019  Dávid Nagy
+Copyright (C) 2013-2020  Dávid Nagy
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -69,6 +69,7 @@ enum pause_menu_item_ids {
 	PAUSE_MENU_LOAD_GAME,
 	PAUSE_MENU_RESTART_LEVEL,
 	PAUSE_MENU_SETTINGS,
+	PAUSE_MENU_RESTART_GAME,
 	PAUSE_MENU_QUIT_GAME,
 	SETTINGS_MENU_GENERAL,
 	SETTINGS_MENU_GAMEPLAY,
@@ -86,6 +87,7 @@ pause_menu_item_type pause_menu_items[] = {
 		{.id = PAUSE_MENU_LOAD_GAME,     .text = "LOAD GAME"},
 		{.id = PAUSE_MENU_RESTART_LEVEL, .text = "RESTART LEVEL"},
 		{.id = PAUSE_MENU_SETTINGS,      .text = "SETTINGS"},
+		{.id = PAUSE_MENU_RESTART_GAME,  .text = "RESTART GAME"},
 		{.id = PAUSE_MENU_QUIT_GAME,     .text = "QUIT GAME"},
 };
 
@@ -117,7 +119,6 @@ int active_settings_subsection = 0;
 int highlighted_settings_subsection = 0;
 int scroll_position = 0;
 int menu_control_y;
-int menu_control_scroll_y;
 int menu_control_x;
 int menu_control_back;
 
@@ -1094,6 +1095,9 @@ void pause_menu_clicked(pause_menu_item_type* item) {
 			active_settings_subsection = 0;
 			controlled_area = 0;
 			break;
+		case PAUSE_MENU_RESTART_GAME:
+			last_key_scancode = SDL_SCANCODE_R | WITH_CTRL;
+			break;
 		case PAUSE_MENU_QUIT_GAME:
 			current_dialog_box = DIALOG_CONFIRM_QUIT;
 			current_dialog_text = "Quit SDLPoP?";
@@ -2044,12 +2048,16 @@ void calculate_exe_crc() {
 		FILE* exe_file = fopen(g_argv[0], "rb");
 		if (exe_file != NULL) {
 			fseek(exe_file, 0, SEEK_END);
-			int size = ftell(exe_file);
+			size_t size = ftell(exe_file);
 			fseek(exe_file, 0, SEEK_SET);
 			if (size > 0) {
-				byte* buffer = malloc((size_t)size);
-				fread(buffer, 1, (size_t)size, exe_file);
-				exe_crc = crc32c(buffer, (dword)size);
+				byte* buffer = malloc(size);
+				size_t bytes = fread(buffer, 1, size, exe_file);
+				if (bytes != size) {
+					fprintf(stderr, "exec changed size during CRC32!?\n");
+					size = bytes;
+				}
+				exe_crc = crc32c(buffer, size);
 				free(buffer);
 			}
 			fclose(exe_file);

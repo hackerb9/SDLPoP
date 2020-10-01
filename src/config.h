@@ -1,6 +1,6 @@
 /*
 SDLPoP, a port/conversion of the DOS game Prince of Persia.
-Copyright (C) 2013-2019  Dávid Nagy
+Copyright (C) 2013-2020  Dávid Nagy
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -30,8 +30,12 @@ The authors of this program may be contacted at https://forum.princed.org
 #define POP_MAX_PATH 256
 #define POP_MAX_OPTIONS_SIZE 256
 
-#define SDLPOP_VERSION "1.20"
+#define SDLPOP_VERSION "1.21"
 #define WINDOW_TITLE "Prince of Persia (SDLPoP) v" SDLPOP_VERSION
+
+// Enable or disable the SDL hardware accelerated renderer backend
+// Uses a software backend otherwise
+#define USE_HW_ACCELERATION
 
 // Enable or disable fading.
 // Fading used to be very buggy, but now it works correctly.
@@ -195,6 +199,12 @@ The authors of this program may be contacted at https://forum.princed.org
 
 // Fix priorities of sword and spike sounds. (As in PoP 1.3.)
 #define FIX_SOUND_PRIORITIES
+
+// Don't draw the right edge of loose floors on the left side of a potion or sword.
+#define FIX_LOOSE_NEXT_TO_POTION
+
+// A guard standing on a door top (with floor) should not become inactive.
+#define FIX_DOORTOP_DISABLING_GUARD
 
 
 // Debug features:
